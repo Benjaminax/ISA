@@ -1,0 +1,45 @@
+<resources>
+    <string name="app_name">StudyAbroad Guide</string>
+    <string name="app_tagline">Your trusted companion for international education</string>
+
+    <!-- General Actions -->
+    <string name="action_next">Next</string>
+    <string name="action_back">Back</string>
+    <string name="action_skip">Skip</string>
+    <string name="action_finish">Get Started</string>
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_search">Search</string>
+    <string name="action_filter">Filter</string>
+    <string name="action_share">Share</string>
+    <string name="action_call">Call</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_add">Add</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_confirm">Confirm</string>
+
+    <!-- Navigation Labels -->
+    <string name="nav_home">Home</string>
+    <string name="nav_guides">Guides</string>
+    <string name="nav_checklists">Checklists</string>
+    <string name="nav_tools">Tools</string>
+    <string name="nav_saved">Saved</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Accessibility Descriptions -->
+    <string name="cd_menu_open">Menu open</string>
+    <string name="cd_menu_closed">Menu closed</string>
+    <string name="cd_navigate_back">Navigate back</string>
+    <string name="cd_search_guides">Search guides and resources</string>
+    <string name="cd_bookmark_article">Bookmark article</string>
+    <string name="cd_unbookmark_article">Remove bookmark</string>
+    <string name="cd_completed_checklist_item">Completed checklist item</string>
+    <string name="cd_incomplete_checklist_item">Incomplete checklist item</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_deadlines">Deadlines</string>
+    <string name="notification_channel_deadlines_description">Reminders and notifications for important international student deadlines</string>
+</resources>
+
