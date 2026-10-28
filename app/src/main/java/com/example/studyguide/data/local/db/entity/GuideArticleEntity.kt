@@ -12,10 +12,10 @@ data class GuideArticleEntity(
     val title: String,
     val summary: String,
     val contentMarkdown: String,
+    val imageUrl: String = "",
     val stepsJson: String = "[]",
     val officialLinksJson: String = "[]",
     val isBookmarked: Boolean = false,
     val readTimeMinutes: Int = 3,
     val lastUpdated: Long = System.currentTimeMillis()
 )
-
