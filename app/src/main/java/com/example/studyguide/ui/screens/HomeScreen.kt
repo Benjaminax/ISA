@@ -1,7 +1,10 @@
 package com.example.studyguide.ui.screens
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,40 +17,77 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.Apartment
+import androidx.compose.material.icons.filled.AssignmentInd
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.FactCheck
+import androidx.compose.material.icons.filled.FlightTakeoff
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.AssignmentInd
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.NotificationsNone
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.studyguide.data.local.db.entity.ChecklistItemEntity
 import com.example.studyguide.data.local.db.entity.DeadlineEntity
 import com.example.studyguide.data.local.db.entity.GuideArticleEntity
+import com.example.studyguide.ui.components.CategoryBadge
+import com.example.studyguide.ui.components.CategoryThemes
+import com.example.studyguide.ui.components.CircularReadinessGauge
 import com.example.studyguide.ui.components.GlassCard
 import com.example.studyguide.ui.components.GlassHeroCard
 import com.example.studyguide.ui.components.GlassPill
+import com.example.studyguide.ui.components.pressScaleClickable
+import com.example.studyguide.ui.theme.AccentAmber
+import com.example.studyguide.ui.theme.AccentCyan
+import com.example.studyguide.ui.theme.AccentEmerald
+import com.example.studyguide.ui.theme.AccentIndigo
+import com.example.studyguide.ui.theme.AccentRose
+import com.example.studyguide.ui.theme.AccentViolet
 import com.example.studyguide.ui.theme.BorderZinc
-import com.example.studyguide.ui.theme.DarkZinc
+import com.example.studyguide.ui.theme.DeepCharcoal
 import com.example.studyguide.ui.theme.LightZinc
 import com.example.studyguide.ui.theme.MutedZinc
+import com.example.studyguide.ui.theme.OffWhite
 import com.example.studyguide.ui.theme.PureBlack
 import com.example.studyguide.ui.theme.PureWhite
+import com.example.studyguide.ui.theme.SoftAmber
+import com.example.studyguide.ui.theme.SoftCyan
+import com.example.studyguide.ui.theme.SoftEmerald
+import com.example.studyguide.ui.theme.SoftIndigo
+import com.example.studyguide.ui.theme.SoftPurple
+import com.example.studyguide.ui.theme.SoftRose
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -58,164 +98,380 @@ fun HomeScreen(
     checklistItems: List<ChecklistItemEntity>,
     deadlines: List<DeadlineEntity>,
     onNavigateToTab: (Int) -> Unit,
-    onSelectArticle: (GuideArticleEntity) -> Unit
+    onSelectArticle: (GuideArticleEntity) -> Unit,
+    onToggleDeadline: (DeadlineEntity) -> Unit = {}
 ) {
     val totalChecklist = checklistItems.size
     val completedChecklist = checklistItems.count { it.isCompleted }
     val checklistProgress = if (totalChecklist > 0) completedChecklist.toFloat() / totalChecklist else 0f
 
-    val upcomingDeadlines = deadlines.filter { !it.isCompleted }.take(3)
-    val featuredArticles = articles.take(4)
+    val totalDeadlines = deadlines.size
+    val completedDeadlines = deadlines.count { it.isCompleted }
+    val overallReadiness = if ((totalChecklist + totalDeadlines) > 0) {
+        (completedChecklist + completedDeadlines).toFloat() / (totalChecklist + totalDeadlines)
+    } else 0f
+
+    val upcomingDeadlines = deadlines.filter { !it.isCompleted }.sortedBy { it.dueDateEpochMs }.take(3)
+    val featuredArticles = articles.take(5)
+
+    val animatedProgress by animateFloatAsState(
+        targetValue = checklistProgress,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "animatedChecklistProgress"
+    )
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(PureWhite)
+            .background(OffWhite)
             .padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        item { Spacer(modifier = Modifier.height(4.dp)) }
+        // Master Greeting Header
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .shadow(6.dp, CircleShape, ambientColor = DeepCharcoal.copy(alpha = 0.15f))
+                            .clip(CircleShape)
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(DeepCharcoal, Color(0xFF312E81))
+                                )
+                            )
+                            .border(2.dp, PureWhite, CircleShape)
+                            .pressScaleClickable { onNavigateToTab(5) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.School,
+                            contentDescription = "Scholar",
+                            tint = PureWhite,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Scholar Victor",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = DeepCharcoal
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Default.Public,
+                                contentDescription = "Destination: USA",
+                                tint = AccentIndigo,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Text(
+                            text = "Fall 2026 • United States Departure",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MutedZinc,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
 
-        // Liquid Glass Hero Banner
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .shadow(4.dp, CircleShape, ambientColor = DeepCharcoal.copy(alpha = 0.08f))
+                        .clip(CircleShape)
+                        .background(PureWhite)
+                        .border(1.dp, BorderZinc, CircleShape)
+                        .pressScaleClickable { onNavigateToTab(3) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.NotificationsNone,
+                        contentDescription = "Notifications",
+                        tint = DeepCharcoal,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+
+        // Master Hero Departure Card with Readiness Gauge
         item {
             GlassHeroCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
                         GlassPill(
                             backgroundColor = PureWhite.copy(alpha = 0.15f),
-                            borderColor = PureWhite.copy(alpha = 0.3f)
+                            borderColor = PureWhite.copy(alpha = 0.25f)
                         ) {
-                            Text(
-                                text = "Fall 2026 Departure",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = PureWhite,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.FlightTakeoff,
+                                    contentDescription = null,
+                                    tint = PureWhite,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "114 DAYS TO TAKEOFF",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = PureWhite,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = 0.5.sp
+                                )
+                            }
                         }
 
-                        Box(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(PureWhite.copy(alpha = 0.15f))
-                                .padding(6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = null,
-                                tint = PureWhite,
-                                modifier = Modifier.size(16.dp)
-                            )
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Text(
+                            text = "Study Abroad\nMission Control",
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = PureWhite,
+                            fontWeight = FontWeight.ExtraBold,
+                            lineHeight = 28.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = "${upcomingDeadlines.size} critical actions pending before departure.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = PureWhite.copy(alpha = 0.75f),
+                            lineHeight = 18.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(PureWhite)
+                                    .pressScaleClickable { onNavigateToTab(2) }
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "Tasks",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = DeepCharcoal
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = null,
+                                        tint = DeepCharcoal,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(PureWhite.copy(alpha = 0.16f))
+                                    .pressScaleClickable { onNavigateToTab(3) }
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = "Deadlines",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PureWhite
+                                )
+                            }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
 
-                    Text(
-                        text = "Hello, Scholar.",
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = PureWhite,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = "Your study abroad dashboard. Pre-arrival tasks, visa application deadlines, and expert guides.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = PureWhite.copy(alpha = 0.75f)
-                    )
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    // Circular Readiness Ring
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
-                        GlassPill(
-                            backgroundColor = PureWhite.copy(alpha = 0.12f),
-                            borderColor = PureWhite.copy(alpha = 0.25f)
-                        ) {
-                            Text(
-                                text = "${upcomingDeadlines.size} Pending Deadlines",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = PureWhite,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        GlassPill(
-                            backgroundColor = PureWhite,
-                            borderColor = PureWhite
-                        ) {
-                            Text(
-                                text = "${(checklistProgress * 100).toInt()}% Ready",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = PureBlack,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        CircularReadinessGauge(
+                            progress = overallReadiness,
+                            size = 80.dp,
+                            strokeWidth = 7.dp
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Ready Score",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = PureWhite.copy(alpha = 0.8f),
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
             }
         }
 
-        // Quick Tools Row
+        // Quick Hub Navigation Cards
         item {
             Column {
                 Text(
-                    text = "Quick Tools",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = DarkZinc,
-                    fontWeight = FontWeight.Bold
+                    text = "Quick Hub",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = DeepCharcoal,
+                    fontWeight = FontWeight.ExtraBold
                 )
-                Spacer(modifier = Modifier.height(10.dp))
-                LazyRow(
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    item {
-                        QuickActionChip(
-                            title = "Visa Guide",
-                            category = "Visa",
-                            onClick = { onNavigateToTab(1) }
+                    QuickHubCard(
+                        title = "Visa Guide",
+                        badge = "5 min read",
+                        icon = Icons.Default.AssignmentInd,
+                        bgSoft = SoftIndigo,
+                        accentColor = AccentIndigo,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigateToTab(1) }
+                    )
+
+                    QuickHubCard(
+                        title = "Tasks",
+                        badge = "$completedChecklist/$totalChecklist Done",
+                        icon = Icons.Default.FactCheck,
+                        bgSoft = SoftEmerald,
+                        accentColor = AccentEmerald,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigateToTab(2) }
+                    )
+
+                    QuickHubCard(
+                        title = "Deadlines",
+                        badge = "${upcomingDeadlines.size} Active",
+                        icon = Icons.Default.Alarm,
+                        bgSoft = SoftAmber,
+                        accentColor = AccentAmber,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigateToTab(3) }
+                    )
+
+                    QuickHubCard(
+                        title = "Housing",
+                        badge = "Guides",
+                        icon = Icons.Default.Apartment,
+                        bgSoft = SoftCyan,
+                        accentColor = AccentCyan,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigateToTab(1) }
+                    )
+                }
+            }
+        }
+
+        // Stats Analytics Strip
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Tasks stat
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(PureWhite)
+                        .border(1.dp, BorderZinc, RoundedCornerShape(18.dp))
+                        .pressScaleClickable { onNavigateToTab(2) }
+                        .padding(14.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = "$completedChecklist/$totalChecklist",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = AccentEmerald
+                        )
+                        Text(
+                            text = "Tasks Done",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MutedZinc,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
-                    item {
-                        QuickActionChip(
-                            title = "Checklists",
-                            category = "Tasks",
-                            onClick = { onNavigateToTab(2) }
+                }
+                // Deadlines stat
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(PureWhite)
+                        .border(1.dp, BorderZinc, RoundedCornerShape(18.dp))
+                        .pressScaleClickable { onNavigateToTab(3) }
+                        .padding(14.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = "${upcomingDeadlines.size}",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (upcomingDeadlines.isEmpty()) AccentEmerald else AccentAmber
+                        )
+                        Text(
+                            text = "Pending Deadlines",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MutedZinc,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
-                    item {
-                        QuickActionChip(
-                            title = "Deadlines",
-                            category = "Reminders",
-                            onClick = { onNavigateToTab(3) }
+                }
+                // Readiness stat
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(PureWhite)
+                        .border(1.dp, BorderZinc, RoundedCornerShape(18.dp))
+                        .pressScaleClickable { onNavigateToTab(5) }
+                        .padding(14.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = "${(overallReadiness * 100).toInt()}%",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = AccentIndigo
                         )
-                    }
-                    item {
-                        QuickActionChip(
-                            title = "Housing & Bank",
-                            category = "Guides",
-                            onClick = { onNavigateToTab(1) }
+                        Text(
+                            text = "Overall Ready",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MutedZinc,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
             }
         }
 
-        // Checklist Progress Card
-        item {
+        // Onboarding Readiness Progress Card        item {
             GlassCard(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = { onNavigateToTab(2) }
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(18.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -224,27 +480,28 @@ fun HomeScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
+                                    .size(38.dp)
                                     .clip(CircleShape)
-                                    .background(PureBlack)
-                                    .padding(6.dp)
+                                    .background(SoftEmerald),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.CheckCircle,
                                     contentDescription = null,
-                                    tint = PureWhite,
-                                    modifier = Modifier.size(16.dp)
+                                    tint = AccentEmerald,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
                                     text = "Onboarding Checklist",
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = DarkZinc,
+                                    color = DeepCharcoal,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "$completedChecklist of $totalChecklist tasks completed",
+                                    text = "$completedChecklist of $totalChecklist essential steps completed",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MutedZinc
                                 )
@@ -254,26 +511,27 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = "View Checklists",
-                            tint = PureBlack
+                            tint = DeepCharcoal,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
                     LinearProgressIndicator(
-                        progress = { checklistProgress },
+                        progress = { animatedProgress },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
-                        color = PureBlack,
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                        color = AccentEmerald,
                         trackColor = LightZinc
                     )
                 }
             }
         }
 
-        // Upcoming Deadlines Header
+        // Upcoming Deadlines Section
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -281,26 +539,43 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.DateRange,
-                        contentDescription = null,
-                        tint = PureBlack
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(SoftAmber),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Event,
+                            contentDescription = null,
+                            tint = AccentAmber,
+                            modifier = Modifier.size(17.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = "Upcoming Deadlines",
                         style = MaterialTheme.typography.titleLarge,
-                        color = DarkZinc,
+                        color = DeepCharcoal,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(LightZinc)
+                        .pressScaleClickable { onNavigateToTab(3) }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "See All",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = DeepCharcoal,
                         fontWeight = FontWeight.Bold
                     )
                 }
-                Text(
-                    text = "See All",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = PureBlack,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { onNavigateToTab(3) }
-                )
             }
         }
 
@@ -309,21 +584,35 @@ fun HomeScreen(
                 GlassCard(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = "No pending deadlines! You are all caught up.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MutedZinc,
-                        modifier = Modifier.padding(16.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = AccentEmerald,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "All caught up! No pending deadlines right now.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MutedZinc
+                        )
+                    }
                 }
             }
         } else {
             items(upcomingDeadlines) { deadline ->
-                DeadlineItemCard(deadline = deadline)
+                MasterDeadlineItemCard(
+                    deadline = deadline,
+                    onToggle = { onToggleDeadline(deadline) }
+                )
             }
         }
 
-        // Essential Guides Header
+        // Featured Guides Header
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -331,111 +620,201 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = PureBlack
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(SoftIndigo),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                            contentDescription = null,
+                            tint = AccentIndigo,
+                            modifier = Modifier.size(17.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "Essential Guides",
+                        text = "Curated Guides",
                         style = MaterialTheme.typography.titleLarge,
-                        color = DarkZinc,
+                        color = DeepCharcoal,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(LightZinc)
+                        .pressScaleClickable { onNavigateToTab(1) }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "Explore All",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = DeepCharcoal,
                         fontWeight = FontWeight.Bold
                     )
                 }
-                Text(
-                    text = "Explore All",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = PureBlack,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { onNavigateToTab(1) }
-                )
             }
         }
 
         items(featuredArticles) { article ->
-            ArticleItemCard(article = article, onClick = { onSelectArticle(article) })
+            MasterArticleCard(
+                article = article,
+                onClick = { onSelectArticle(article) }
+            )
         }
 
-        item { Spacer(modifier = Modifier.height(24.dp)) }
+        item { Spacer(modifier = Modifier.height(100.dp)) }
     }
 }
 
 @Composable
-fun QuickActionChip(
+fun QuickHubCard(
     title: String,
-    category: String,
+    badge: String,
+    icon: ImageVector,
+    bgSoft: Color,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     GlassCard(
-        onClick = onClick,
-        shape = RoundedCornerShape(14.dp)
+        modifier = modifier.pressScaleClickable(onClick),
+        shape = RoundedCornerShape(18.dp),
+        elevation = 2.dp
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.Start
         ) {
             Box(
                 modifier = Modifier
-                    .clip(CircleShape)
-                    .background(LightZinc)
-                    .padding(6.dp)
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(bgSoft),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = null,
-                    tint = DarkZinc,
-                    modifier = Modifier.size(14.dp)
+                    imageVector = icon,
+                    contentDescription = title,
+                    tint = accentColor,
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = DarkZinc,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = category,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MutedZinc
-                )
-            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = DeepCharcoal,
+                maxLines = 1
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Text(
+                text = badge,
+                style = MaterialTheme.typography.labelSmall,
+                color = accentColor,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 11.sp,
+                maxLines = 1
+            )
         }
     }
 }
 
 @Composable
-fun DeadlineItemCard(deadline: DeadlineEntity) {
-    val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-    val dueDateString = dateFormat.format(Date(deadline.dueDateEpochMs))
+fun MasterDeadlineItemCard(
+    deadline: DeadlineEntity,
+    onToggle: () -> Unit
+) {
+    val date = Date(deadline.dueDateEpochMs)
+    val monthFormat = SimpleDateFormat("MMM", Locale.getDefault())
+    val dayFormat = SimpleDateFormat("dd", Locale.getDefault())
+    val monthStr = monthFormat.format(date).uppercase()
+    val dayStr = dayFormat.format(date)
+
+    val now = System.currentTimeMillis()
+    val diffDays = ((deadline.dueDateEpochMs - now) / (1000 * 60 * 60 * 24)).toInt()
+
+    val (urgencyText, urgencyBg, urgencyColor) = when {
+        deadline.isCompleted -> Triple("Completed", SoftEmerald, AccentEmerald)
+        diffDays < 0 -> Triple("Overdue", SoftRose, AccentRose)
+        diffDays == 0 -> Triple("Due Today", SoftRose, AccentRose)
+        diffDays <= 3 -> Triple("$diffDays days left", SoftRose, AccentRose)
+        diffDays <= 7 -> Triple("$diffDays days left", SoftAmber, AccentAmber)
+        else -> Triple("$diffDays days left", LightZinc, MutedZinc)
+    }
 
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp)
+        onClick = onToggle,
+        shape = RoundedCornerShape(20.dp),
+        backgroundColor = PureWhite
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(PureBlack)
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                ) {
+            // Calendar Badge Block
+            Box(
+                modifier = Modifier
+                    .size(54.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(LightZinc)
+                    .border(1.dp, BorderZinc, RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = deadline.category,
+                        text = monthStr,
                         style = MaterialTheme.typography.labelSmall,
-                        color = PureWhite,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MutedZinc,
+                        fontSize = 10.sp
                     )
+                    Text(
+                        text = dayStr,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = DeepCharcoal,
+                        lineHeight = 18.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CategoryBadge(category = deadline.category)
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(urgencyBg)
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = urgencyText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = urgencyColor,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
@@ -443,7 +822,7 @@ fun DeadlineItemCard(deadline: DeadlineEntity) {
                 Text(
                     text = deadline.title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = DarkZinc,
+                    color = DeepCharcoal,
                     fontWeight = FontWeight.Bold
                 )
 
@@ -452,103 +831,137 @@ fun DeadlineItemCard(deadline: DeadlineEntity) {
                     Text(
                         text = deadline.notes,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MutedZinc
+                        color = MutedZinc,
+                        maxLines = 1
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(10.dp))
 
-            GlassPill(
-                backgroundColor = LightZinc,
-                borderColor = BorderZinc
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .clip(CircleShape)
+                    .background(if (deadline.isCompleted) AccentEmerald else LightZinc)
+                    .border(
+                        1.5.dp,
+                        if (deadline.isCompleted) AccentEmerald else BorderZinc,
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = dueDateString,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = DarkZinc,
-                    fontWeight = FontWeight.Bold
-                )
+                if (deadline.isCompleted) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Completed",
+                        tint = PureWhite,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun ArticleItemCard(
+fun MasterArticleCard(
     article: GuideArticleEntity,
     onClick: () -> Unit
 ) {
+    val categoryStyle = CategoryThemes.getStyle(article.categoryId)
+
     GlassCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth(),
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(22.dp),
+        elevation = 2.dp
     ) {
         Column {
-            if (article.imageUrl.isNotBlank()) {
-                AsyncImage(
-                    model = article.imageUrl,
-                    contentDescription = article.title,
-                    contentScale = ContentScale.Crop,
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
+                    .background(categoryStyle.gradient),
+                contentAlignment = Alignment.Center
+            ) {
+                if (article.imageUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = article.imageUrl,
+                        contentDescription = article.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                // Gradient scrim overlay
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    DeepCharcoal.copy(alpha = 0.65f)
+                                )
+                            )
+                        )
+                )
+
+                // Category pill on top of image
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(150.dp)
-                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                )
-            }
-
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
+                        .align(Alignment.BottomStart)
+                        .padding(14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
+                    CategoryBadge(category = article.categoryId)
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(DarkZinc)
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(PureBlack.copy(alpha = 0.6f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
+                        Icon(
+                            imageVector = Icons.Default.Schedule,
+                            contentDescription = null,
+                            tint = PureWhite,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = article.categoryId,
+                            text = "${article.readTimeMinutes} min",
                             style = MaterialTheme.typography.labelSmall,
                             color = PureWhite,
                             fontWeight = FontWeight.Bold
                         )
                     }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "${article.readTimeMinutes} min read",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MutedZinc
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(
-                            imageVector = Icons.Filled.Star,
-                            contentDescription = "Bookmark",
-                            tint = if (article.isBookmarked) PureBlack else BorderZinc,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
+            Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = article.title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = DarkZinc,
-                    fontWeight = FontWeight.Bold
+                    color = DeepCharcoal,
+                    fontWeight = FontWeight.ExtraBold,
+                    lineHeight = 22.sp
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
                     text = article.summary,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MutedZinc,
-                    maxLines = 2
+                    maxLines = 2,
+                    lineHeight = 18.sp
                 )
             }
         }
